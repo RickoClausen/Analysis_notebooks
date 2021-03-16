@@ -1,0 +1,151 @@
+#+TITLE: Bias accuracy comparison
+#+DESCRIPTION: ahsdasdad
+
+#+begin_src jupyter-python :session py
+import pandas as pd
+
+pd.set_option('display.max_rows', 20)
+pd.set_option('display.max_columns', 20)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :session py
+# master_file = "data/od-accuracy_master.parquet"
+master_file = "data/od_accuracy_master_lim.parquet"
+new_file = "data/od_accuracy_out.parquet"
+df_master = pd.read_parquet(master_file)
+df_new = pd.read_parquet(new_file)
+
+df_master = df_master.rename(columns={"ffe_total": "ffe_prediction", "ffe": "ffe_actual"})
+df_new = df_new.rename(columns={"ffe_total": "ffe_prediction", "ffe": "ffe_actual"})
+#+end_src
+
+#+RESULTS:
+
+Let us start by just summarizing the global performance of each of the files.
+#+begin_src jupyter-python :session py
+from useful_functions import calculate_performance
+print("Master performance")
+master_out = calculate_performance(df_master, horizons=range(1, 18))
+master_out
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Master performance
+#+begin_example
+                   rmse       mae       mape   pct_bias
+horizon_days
+1.0           10.764765  3.355179  60.979844 -10.699643
+2.0           13.764633  3.566661  68.060250 -10.510306
+3.0           15.741832  4.007051  74.938184 -11.110068
+4.0           15.637409  4.490129  70.429245 -11.977828
+5.0           16.742931  4.546962  69.360729 -13.228817
+6.0           12.912640  4.623078  74.322296 -14.865340
+7.0           17.053712  5.202166  78.253114 -16.029589
+8.0           17.684646  5.472108  78.808252 -17.576332
+9.0           15.705530  5.467897  79.954783 -18.063366
+10.0          18.423100  5.863650  83.702388 -18.612641
+11.0          20.934145  6.453354  88.172605 -20.220032
+13.0          21.740116  6.612411  89.426506 -21.204629
+14.0          20.136724  6.711353  91.204285 -21.872332
+15.0          21.528409  6.953380  93.147946 -22.171290
+16.0          21.983742  7.104738  94.703925 -23.684159
+17.0          22.390723  7.198684  95.207147 -22.994756
+#+end_example
+:END:
+
+#+begin_src jupyter-python
+print("Feature branch performance:")
+new_out = calculate_performance(df_new, horizons=range(1, 18))
+new_out
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Feature branch performance:
+#+begin_example
+                   rmse       mae       mape   pct_bias
+horizon_days
+1.0           10.845371  3.153897  57.428036  -9.551731
+2.0            9.275074  3.069805  52.384744 -11.404911
+3.0           15.186358  3.725540  71.404028 -10.033572
+4.0           13.651092  4.173219  65.259122 -11.172942
+5.0           16.404819  4.319920  65.925817 -11.761349
+6.0           15.755905  4.846543  81.703359 -13.432888
+7.0           16.352492  4.940270  74.999279 -14.145753
+8.0           16.910868  5.190768  76.458729 -15.555663
+10.0          17.884658  5.651807  82.254325 -17.048596
+11.0          21.610508  6.295134  88.286866 -18.669653
+13.0          19.980359  6.506661  89.026246 -22.931942
+14.0          21.842583  6.592420  91.485476 -19.921321
+15.0          20.785211  6.588015  90.976780 -20.056825
+17.0          21.956667  6.911682  95.060897 -19.713985
+#+end_example
+:END:
+
+Relative performance
+#+begin_src jupyter-python
+print("Relative performance [%, negative is good]")
+(new_out[["rmse", "mae"]] / master_out[["rmse", "mae"]] - 1) * 100
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Relative performance [%, negative is good]
+#+begin_example
+                   rmse        mae
+horizon_days
+1.0            0.748802  -5.999150
+2.0          -32.616630 -13.930576
+3.0           -3.528649  -7.025392
+4.0          -12.702346  -7.057936
+5.0           -2.019432  -4.993273
+6.0           22.019235   4.833683
+7.0           -4.111828  -5.034366
+8.0           -4.375426  -5.141360
+9.0                 NaN        NaN
+10.0          -2.922647  -3.612814
+11.0           3.230909  -2.451754
+13.0          -8.094519  -1.599268
+14.0           8.471384  -1.772122
+15.0          -3.452174  -5.254495
+16.0                NaN        NaN
+17.0          -1.938554  -3.986871
+#+end_example
+:END:
+
+#+begin_src jupyter-python
+print("Relative performance [%, negative is good]")
+new_out[["mape", "pct_bias"]].abs() - master_out[["mape", "pct_bias"]].abs()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Relative performance [%, negative is good]
+#+begin_example
+                   mape  pct_bias
+horizon_days
+1.0           -3.551808 -1.147912
+2.0          -15.675507  0.894606
+3.0           -3.534155 -1.076496
+4.0           -5.170124 -0.804886
+5.0           -3.434912 -1.467468
+6.0            7.381062 -1.432452
+7.0           -3.253835 -1.883836
+8.0           -2.349523 -2.020669
+9.0                 NaN       NaN
+10.0          -1.448063 -1.564045
+11.0           0.114261 -1.550378
+13.0          -0.400261  1.727313
+14.0           0.281191 -1.951011
+15.0          -2.171166 -2.114465
+16.0                NaN       NaN
+17.0          -0.146251 -3.280772
+#+end_example
+:END:
+
+#+begin_src jupyter-python
+
+#+end_src
